@@ -1,8 +1,22 @@
 const express = require('express');
 const bcrypt = require('bcrypt-nodejs');
 const cors = require('cors');
+const knex = require('knex');
 
 
+const db = knex ({
+    client: 'pg',
+    connection: {
+        host: '127.0.0.1',
+        port: 5432,
+        user: 'postgres',
+        password: "7897939",
+        database: 'smart-brain'
+    }
+});
+
+
+// 5432
 const app = express();
 app.use(express.json());
 app.use(cors())
@@ -66,34 +80,38 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => { 
     const { email, name, password } = req.body;
-    // bcrypt.hash(password, null, null, function (err, hash) {
-    //     // Store hash in your password DB.
-    //     console.log(hash);
-    // });
-    database.users.push(
-         {
-            id: "125",
-            name: name,
-            email: email,            
-            entries: 0,
-            joined: new Date()
+   
+    db("users")
+        .returning("*") 
+        .insert({
+           
+        email: email,
+        name: name,
+        joined: new Date()
+
+    })
+        .then(user => {
+            res.json(user[0])
         })
-    res.json(database.users[database.users.length - 1])
+        .catch(err => res.status(400).json('unable to register'))
+    
 })
 
 
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
-    let found = false;
-    database.users.forEach(user => {
-        if (user.id === id) {
-            return res.json(user);
-            found: true;
-        } 
-    })
-    if (!found) { 
-        res.status(400).json("NOT FOUND");
-    }
+    
+    db.select('*').from('users').where({id})
+        .then(user => { 
+            if (user.length) {
+                res.json(user[0])
+            } else {
+            res.status(404).json('Not found')
+            
+        }            
+        })
+       .catch(err => res.status(400).json('error getting user'))
+    
 })
 
 app.put('/image', (req, res) => { 
